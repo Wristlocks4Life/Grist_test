@@ -1,0 +1,80 @@
+<div id="page1">
+  <h2>Select NGS Run</h2>
+  <select id="ngsRunSelect"></select>
+  <button id="toPage2">Next</button>
+</div>
+
+<div id="page2" style="display:none;">
+  <h2>Select Sample</h2>
+  <select id="sampleSelect"></select>
+  <button id="toPage3">Next</button>
+</div>
+
+<div id="page3" style="display:none;">
+  <h2>Selected Data</h2>
+  <p><strong>Box Name:</strong> <span id="boxName"></span></p>
+  <p><strong>Sample Name:</strong> <span id="sampleName"></span></p>
+</div>
+
+const grist = window.grist;
+
+// Variables to store selected IDs
+let selectedNGSRunId = null;
+let selectedSampleId = null;
+
+// Fetch and populate NGS_Run_Overview options
+async function populateNGSRunOptions() {
+  const ngsRuns = await grist.docApi.fetchTable("NGS_Run_Overview");
+  const selectElement = document.getElementById("ngsRunSelect");
+
+  ngsRuns.forEach(run => {
+    const option = document.createElement("option");
+    option.value = run.id;
+    option.text = run.run_name; // Assuming run_name is a field in NGS_Run_Overview
+    selectElement.add(option);
+  });
+}
+
+// Fetch and populate Sample_Overview options
+async function populateSampleOptions() {
+  const samples = await grist.docApi.fetchTable("Sample_Overview");
+  const selectElement = document.getElementById("sampleSelect");
+
+  samples.forEach(sample => {
+    const option = document.createElement("option");
+    option.value = sample.id;
+    option.text = sample.sample_name; // Assuming sample_name is a field in Sample_Overview
+    selectElement.add(option);
+  });
+}
+
+// Show selected data on the third page and update the run status
+async function showSelectedData() {
+  const sampleData = await grist.docApi.fetchSelectedTable("Sample_Overview", selectedSampleId);
+
+  if (sampleData) {
+    document.getElementById("boxName").textContent = sampleData.box_name; // Assuming box_name is a field
+    document.getElementById("sampleName").textContent = sampleData.sample_name;
+  }
+
+  // Update run_status in NGS_Run_Overview to 2
+  await grist.docApi.updateRecord("NGS_Run_Overview", selectedNGSRunId, { run_status: 2 });
+}
+
+// Event listeners for buttons
+document.getElementById("toPage2").addEventListener("click", () => {
+  selectedNGSRunId = document.getElementById("ngsRunSelect").value;
+  document.getElementById("page1").style.display = "none";
+  document.getElementById("page2").style.display = "block";
+});
+
+document.getElementById("toPage3").addEventListener("click", async () => {
+  selectedSampleId = document.getElementById("sampleSelect").value;
+  document.getElementById("page2").style.display = "none";
+  document.getElementById("page3").style.display = "block";
+  await showSelectedData();
+});
+
+// Initialize options on page load
+populateNGSRunOptions();
+populateSampleOptions();
